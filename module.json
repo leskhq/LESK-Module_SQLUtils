@@ -1,0 +1,10 @@
+{
+  "name": "SQLUtils",
+  "slug": "sql_utils",
+  "namespace": "SQLUtils",
+  "version": "1.0",
+  "author": "Sebastien Routier",
+  "license": "GPL-3.0",
+  "description": "Set of utility functions and classes to help interact with SQL Servers.",
+  "order": 10
+}
