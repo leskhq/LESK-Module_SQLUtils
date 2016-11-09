@@ -18,6 +18,11 @@ None.
 * A driver or library must be installed and configured on the system to allow communications with the SQL server of 
 choice. In the case where FreeTDS is selected, a sample configuration file is provided in the ```misc/``` directory
 to set the protocol version to ```7.3```.
+Follow these instructions to backup your existing configuration and copy the one provided:
+```
+$ sudo cp /etc/freetds.conf /etc/freetds.conf.org
+$ sudo cp app/Modules/SQLUtils/misc/freetds.conf /etc/freetds.conf
+```
 
 # Installing and activating
 Once a new module is detected by the framework, a site administrator can go to the "Modules administration" page 
