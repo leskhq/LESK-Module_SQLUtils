@@ -86,4 +86,38 @@ class SQLUtils
 
     }
 
+    /**
+     * Retrieves the error messages from an array and flatten then into a string with each message separated by the
+     * separator provided.
+     *
+     * @param $sqlResult The array of error messages.
+     * @param string $separator The message separator, defaults to ' | '.
+     * @return null|string
+     */
+    public static function GetErrorMessages($sqlResult, $separator = ' | ')
+    {
+        try {
+            $msg = null;
+            if (isset($sqlResult) && (count($sqlResult) > 0 )) {
+                foreach ($sqlResult as $key => $val) {
+                    if (is_array($val)) {
+                        $msg .= self::GetErrorMessages($val, $separator);
+                    }
+                    else {
+                        $msg .= ($msg) ? $separator . $val : $val;
+                    }
+                }
+            }
+
+            return $msg;
+        } catch (Exception $e) {
+            Log::error("Exception caught running SQLUtils::GetErrorMessages().");
+            Log::error("Exception message [" . $e->getMessage() . "].");
+            (new Handler(Log::getMonolog()))->report($e);
+        } finally {
+
+        }
+
+    }
+
 }
