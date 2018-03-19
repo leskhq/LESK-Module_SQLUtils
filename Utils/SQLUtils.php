@@ -25,6 +25,7 @@ class SQLUtils
      * @param null $stmtOptions  Statement options to run before the real query.
      * @param \Illuminate\Database\Connection $dbConn  The database connection to use, otherwise a new one
      *                           will be established. Useful with transactions.
+     * @param boolean $multiRowset Indicates that we expect the result to contain multiple rowsets.
      * @return array             The array of results according to the fetch style.
      *
      *  $sqlStr = "SELECT first_name, last_name FROM employees WHERE email LIKE :Email ORDER BY Email;";
@@ -41,7 +42,7 @@ class SQLUtils
      *  $LN = user->last_name;
      *
      */
-    public static function Exec($connectionName, $query, $params = null, $fetch_style = PDO::FETCH_BOTH, $stmtOptions = null, \Illuminate\Database\Connection $dbConn = null)
+    public static function Exec($connectionName, $query, $params = null, $fetch_style = PDO::FETCH_BOTH, $stmtOptions = null, \Illuminate\Database\Connection $dbConn = null, $multiRowset = false)
     {
         $dbStmt = null;
 
@@ -70,7 +71,17 @@ class SQLUtils
 
             $dbStmt->execute();
 
-            $result = $dbStmt->fetchAll($fetch_style);
+            if ($multiRowset) {
+                $cnt = 0;
+                do {
+                    $rowset = $dbStmt->fetchAll($fetch_style);
+                    $result[$cnt] = $rowset;
+                    $cnt++;
+                } while ($dbStmt->nextRowset());
+            } else {
+                $result = $dbStmt->fetchAll($fetch_style);
+            }
+
 
             return $result;
 
