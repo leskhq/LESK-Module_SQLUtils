@@ -42,7 +42,7 @@ class SQLUtils
      *  $LN = user->last_name;
      *
      */
-    public static function Exec($connectionName, $query, $params = null, $fetch_style = PDO::FETCH_BOTH, $stmtOptions = null, \Illuminate\Database\Connection $dbConn = null, $multiRowset = false)
+    public static function Exec($connectionName, $query, $params = null, $fetch_style = PDO::FETCH_BOTH, $stmtOptions = null, \Illuminate\Database\Connection $dbConn = null)
     {
         $dbStmt = null;
 
@@ -71,15 +71,17 @@ class SQLUtils
 
             $dbStmt->execute();
 
-            if ($multiRowset) {
-                $cnt = 0;
-                do {
-                    $rowset = $dbStmt->fetchAll($fetch_style);
-                    $result[$cnt] = $rowset;
-                    $cnt++;
-                } while ($dbStmt->nextRowset());
-            } else {
-                $result = $dbStmt->fetchAll($fetch_style);
+            // Get all result sets.
+            $cnt = 0;
+            do {
+                $rowset = $dbStmt->fetchAll($fetch_style);
+                $result[$cnt] = $rowset;
+                $cnt++;
+            } while ($dbStmt->nextRowset());
+
+            // If we only got one result set, pick that one and return it.
+            if (1 == count($result)) {
+                $result = $result[0];
             }
 
 
