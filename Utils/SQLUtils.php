@@ -10,8 +10,8 @@ class SQLUtils
 {
 
     /**
-     * Execute the SQL query and return an array of rowset.
-     * In most cases on one rowset is returned, meaning that
+     * Execute the SQL query and returns an array of rowset.
+     * In most cases only one rowset is returned, meaning that
      * only rowSets[0] be set and contain all the rows that
      * really matter.
      *
@@ -29,7 +29,7 @@ class SQLUtils
      * @return array             The array of results according to the fetch style.
      *
      *  $sqlStr = "SELECT first_name, last_name FROM employees WHERE email LIKE :Email ORDER BY Email;";
-     *	$user = SQLExec('my_database', $sqlStr,
+     *	$user = SQLUtils::ExecPrefetch('my_database', $sqlStr,
      *		    [
      *			    ':Email' => ['data' => $emailStr, 'type' => PDO::PARAM_STR],
      * 		    ],
@@ -40,6 +40,60 @@ class SQLUtils
      *          ]);
      *  $FN = $user->first_name;
      *  $LN = user->last_name;
+     *
+     */
+    public static function ExecPrefetch($connectionName, $query, $params = null, $fetch_style = PDO::FETCH_BOTH, $stmtOptions = null, \Illuminate\Database\Connection $dbConn = null)
+    {
+        $dbStmt = null;
+
+        try {
+
+            $dbStmt = SQLUtils::Exec($connectionName, $query, $params, $fetch_style, $stmtOptions, $dbConn);
+
+            // Get all result sets.
+            $cnt = 0;
+            do {
+                $rowset = $dbStmt->fetchAll($fetch_style);
+                $result[$cnt] = $rowset;
+                $cnt++;
+            } while ($dbStmt->nextRowset() && $dbStmt->columnCount());
+
+            // If we only got one result set, pick that one and return it.
+            if (1 == count($result)) {
+                $result = $result[0];
+            }
+
+
+            return $result;
+
+        } catch (Exception $e) {
+            Log::error("Exception caught running SQLUtils::ExecPrefetch() with statement [" . $query . "].");
+            Log::error("Exception message [" . $e->getMessage() . "].");
+            (new Handler(Log::getMonolog()))->report($e);
+        } finally {
+            if (null !== $dbStmt) {
+                $dbStmt->closeCursor();
+            }
+        }
+
+    }
+
+    /**
+     * Execute the SQL query and returns the raw PDOStatement.
+     *
+     * @param $connectionName 	 The name of the connection to use as configured in 'database.php'
+     * @param $query 			 The SQL query to run.
+     * @param null $params		 An array of parameters for the query. Either positional or named.
+     * 							 The key of the array is the position or name, the value is an
+     * 							 other array containing both the value with the 'data' key and the
+     * 							 type.
+     * @param int $fetch_style   The fetch style for the query.
+     * @param null $stmtOptions  Statement options to run before the real query.
+     * @param \Illuminate\Database\Connection $dbConn  The database connection to use, otherwise a new one
+     *                           will be established. Useful with transactions.
+     * @param boolean $multiRowset Indicates that we expect the result to contain multiple rowsets.
+     * @return array             The array of results according to the fetch style.
+     *
      *
      */
     public static function Exec($connectionName, $query, $params = null, $fetch_style = PDO::FETCH_BOTH, $stmtOptions = null, \Illuminate\Database\Connection $dbConn = null)
@@ -71,30 +125,12 @@ class SQLUtils
 
             $dbStmt->execute();
 
-            // Get all result sets.
-            $cnt = 0;
-            do {
-                $rowset = $dbStmt->fetchAll($fetch_style);
-                $result[$cnt] = $rowset;
-                $cnt++;
-            } while ($dbStmt->nextRowset());
-
-            // If we only got one result set, pick that one and return it.
-            if (1 == count($result)) {
-                $result = $result[0];
-            }
-
-
-            return $result;
+            return $dbStmt;
 
         } catch (Exception $e) {
             Log::error("Exception caught running SQLUtils::Exec() with statement [" . $query . "].");
             Log::error("Exception message [" . $e->getMessage() . "].");
             (new Handler(Log::getMonolog()))->report($e);
-        } finally {
-            if (null !== $dbStmt) {
-                $dbStmt->closeCursor();
-            }
         }
 
     }
