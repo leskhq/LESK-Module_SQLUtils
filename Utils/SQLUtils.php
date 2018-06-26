@@ -70,6 +70,7 @@ class SQLUtils
             Log::error("Exception caught running SQLUtils::ExecPrefetch() with statement [" . $query . "].");
             Log::error("Exception message [" . $e->getMessage() . "].");
             (new Handler(Log::getMonolog()))->report($e);
+            throw $e;
         } finally {
             if (null !== $dbStmt) {
                 $dbStmt->closeCursor();
@@ -131,6 +132,7 @@ class SQLUtils
             Log::error("Exception caught running SQLUtils::Exec() with statement [" . $query . "].");
             Log::error("Exception message [" . $e->getMessage() . "].");
             (new Handler(Log::getMonolog()))->report($e);
+            throw $e;
         }
 
     }
