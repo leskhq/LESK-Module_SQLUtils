@@ -1,6 +1,8 @@
 <?php namespace App\Modules\SQLUtils\Utils;
 
 use App\Exceptions\Handler;
+use App\Libraries\Str;
+use App\Modules\SQLUtils\Exceptions\SQLException;
 use DB;
 use Exception;
 use Log;
@@ -63,6 +65,12 @@ class SQLUtils
                 $result = $result[0];
             }
 
+            // Check if the query issued an internal error.
+            $errorInfo =  self::GetDBOErrorInfo($dbStmt);
+            if (null != $errorInfo)
+            {
+                throw new SQLException($errorInfo, $result);
+            }
 
             return $result;
 
@@ -138,8 +146,10 @@ class SQLUtils
     }
 
     /**
-     * Retrieves the error messages from an array and flatten then into a string with each message separated by the
-     * separator provided.
+     * Deprecated function, do not use.
+     * Instead use the function FlattenArrayOfMessages.
+     *
+     * @deprecated Use FlattenArrayOfMessages instead.
      *
      * @param $sqlResult The array of error messages.
      * @param string $separator The message separator, defaults to ' | '.
@@ -147,12 +157,26 @@ class SQLUtils
      */
     public static function GetErrorMessages($sqlResult, $separator = ' | ')
     {
+        trigger_error('Method ' . __METHOD__ . ' is deprecated', E_USER_DEPRECATED);
+        self::FlattenArrayOfMessages($sqlResult, $separator);
+    }
+
+    /**
+     * Retrieves the error messages from an array and flatten then into a string with each message separated by the
+     * separator provided.
+     *
+     * @param $sqlResult The array of error messages.
+     * @param string $separator The message separator, defaults to ' | '.
+     * @return null|string
+     */
+    public static function FlattenArrayOfMessages($sqlResult, $separator = ' | ')
+    {
         try {
             $msg = null;
             if (isset($sqlResult) && (count($sqlResult) > 0 )) {
                 foreach ($sqlResult as $key => $val) {
                     if (is_array($val)) {
-                        $msg .= self::GetErrorMessages($val, $separator);
+                        $msg .= self::FlattenArrayOfMessages($val, $separator);
                     }
                     else {
                         $msg .= ($msg) ? $separator . $val : $val;
@@ -162,13 +186,43 @@ class SQLUtils
 
             return $msg;
         } catch (Exception $e) {
-            Log::error("Exception caught running SQLUtils::GetErrorMessages().");
+            Log::error("Exception caught running SQLUtils::FlattenArrayOfMessages().");
             Log::error("Exception message [" . $e->getMessage() . "].");
             (new Handler(Log::getMonolog()))->report($e);
         } finally {
 
         }
 
+    }
+
+    /**
+     * Get the error info array from the last executed statement.
+     * Returns null is the error info array contains status values of 0,
+     * meaning that the last statement was successful.
+     *
+     * @param $dbStmt
+     * @return mixed
+     */
+    private static function GetDBOErrorInfo($dbStmt)
+    {
+        $dboErrorInfo = null;
+
+        // Get the DBO error info array.
+        $dboErrorInfo = $dbStmt->errorInfo();
+        // If error info array is not null.
+        if (!Str::isNullOrEmptyString($dboErrorInfo)) {
+            // Extract SQL State and Driver Code.
+            $sqlState = $dboErrorInfo[0];
+            $sqlDriverCode = $dboErrorInfo[1];
+            // If SQL State or Driver Code are zero.
+            if (('00000' == $sqlState) && (0 == $sqlDriverCode)) {
+                // Set the return variable to null, as every thing worked as expected.
+                $dboErrorInfo = null;
+            }
+        }
+
+        // Return Message or null if last statement was successful
+        return $dboErrorInfo;
     }
 
 }
